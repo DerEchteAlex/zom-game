@@ -7,13 +7,18 @@ export interface ZombieConfig {
   moneyValue: number;
   color: number;
   label: string;
+  animKey: string; // Phaser animation key to play (created in GameScene.create())
+  textureKey: string; // texture key prefix for the first frame, e.g. "zombie-normal" -> "zombie-normal-1"
+  width: number; // display width in px — lets each zombie type have its own size
+  height: number; // display height in px
 }
 
 export class Zombie {
   sprite: Phaser.GameObjects.Container;
-  body: Phaser.GameObjects.Rectangle;
+  body: Phaser.GameObjects.Sprite;
   hpBar: Phaser.GameObjects.Rectangle;
   hpBarBg: Phaser.GameObjects.Rectangle;
+  hpBarWidth: number;
   maxHp: number;
   hp: number;
   speed: number;
@@ -28,20 +33,25 @@ export class Zombie {
     this.scoreValue = cfg.scoreValue;
     this.moneyValue = cfg.moneyValue;
 
-    this.body = scene.add.rectangle(0, 0, 40, 60, cfg.color).setStrokeStyle(2, 0x000000);
-    this.hpBarBg = scene.add.rectangle(0, -45, 44, 6, 0x333333);
-    this.hpBar = scene.add.rectangle(0, -45, 44, 6, 0xff5252);
+    this.body = scene.add.sprite(0, 0, `${cfg.textureKey}-1`).setDisplaySize(cfg.width, cfg.height);
+    this.body.play(cfg.animKey);
+
+    // HP bar scales with zombie size instead of being hardcoded to one size for all types.
+    this.hpBarWidth = cfg.width + 4;
+    const barY = -(cfg.height / 2) - 10;
+    this.hpBarBg = scene.add.rectangle(0, barY, this.hpBarWidth, 6, 0x333333);
+    this.hpBar = scene.add.rectangle(0, barY, this.hpBarWidth, 6, 0xff5252);
 
     this.sprite = scene.add.container(x, y, [this.body, this.hpBarBg, this.hpBar]);
-    this.sprite.setSize(40, 60);
+    this.sprite.setSize(cfg.width, cfg.height);
     this.body.setInteractive({ useHandCursor: true });
   }
 
   takeDamage(amount: number) {
     this.hp -= amount;
     const pct = Math.max(0, this.hp / this.maxHp);
-    this.hpBar.width = 44 * pct;
-    this.hpBar.x = -22 + (44 * pct) / 2;
+    this.hpBar.width = this.hpBarWidth * pct;
+    this.hpBar.x = -this.hpBarWidth / 2 + (this.hpBarWidth * pct) / 2;
     if (this.hp <= 0 && this.alive) {
       this.alive = false;
     }

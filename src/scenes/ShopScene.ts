@@ -11,9 +11,9 @@ interface UpgradeDef {
 
 const UPGRADES: UpgradeDef[] = [
   { key: "damage", label: "Damage", baseCost: 20, step: 3, format: (v) => `${v}` },
-  { key: "fireRateMs", label: "Fire Rate (lower = faster)", baseCost: 25, step: -25, format: (v) => `${v}ms` },
+  { key: "fireRateMs", label: "Fire Rate (lower = faster)", baseCost: 20, step: -25, format: (v) => `${v}ms` },
   { key: "reloadMs", label: "Reload Speed (lower = faster)", baseCost: 20, step: -80, format: (v) => `${v}ms` },
-  { key: "magazineSize", label: "Magazine Size", baseCost: 30, step: 2, format: (v) => `${v}` },
+  { key: "magazineSize", label: "Magazine Size", baseCost: 20, step: 2, format: (v) => `${v}` },
 ];
 
 export class ShopScene extends Phaser.Scene {

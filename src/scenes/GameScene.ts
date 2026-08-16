@@ -53,23 +53,63 @@ export class GameScene extends Phaser.Scene {
     this.lives = this.registry.get("lives") ?? 5;
   }
 
+  preload() {
+    // Files must live in public/assets/ (not src/assets/) — Vite only serves public/ at the site root.
+    this.load.image("zombie-normal-1", "assets/zom-normal-walk1.png");
+    this.load.image("zombie-normal-2", "assets/zom-normal-walk2.png");
+    this.load.image("zombie-fast-1", "assets/zom-fast-walk1.png");
+    this.load.image("zombie-fast-2", "assets/zom-fast-walk2.png");
+    this.load.image("zombie-tank-1", "assets/zom-fat-walk1.png");
+    this.load.image("zombie-tank-2", "assets/zom-fat-walk2.png");
+    this.load.image("player", "assets/player.png");
+    this.load.image("background", "assets/background.png");
+  }
+
   create() {
     this.cameras.main.setBackgroundColor(0x2b2b2b);
+    this.add.image(450, 300, "background").setDisplaySize(900, 600);
 
-    // Base line (left edge — zombies must not cross this)
-    this.baseLine = this.add.rectangle(BASE_LINE_X, 300, 6, 600, 0xff5252);
-
+    // Register walk animations once per scene start — must happen before any zombie spawns.
+    // Guarded because create() re-runs every time we return from the shop, and Phaser's
+    // animation manager is global (not per-scene-instance), so re-creating the same key throws.
+    if (!this.anims.exists("walk-normal")) {
+      this.anims.create({
+        key: "walk-normal",
+        frames: [{ key: "zombie-normal-1" }, { key: "zombie-normal-2" }],
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists("walk-fast")) {
+      this.anims.create({
+        key: "walk-fast",
+        frames: [{ key: "zombie-fast-1" }, { key: "zombie-fast-2" }],
+        frameRate: 8, // faster flicker to match faster movement
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists("walk-tank")) {
+      this.anims.create({
+        key: "walk-tank",
+        frames: [{ key: "zombie-tank-1" }, { key: "zombie-tank-2" }],
+        frameRate: 2, // slower, heavier feel
+        repeat: -1,
+      });
+    }
+    
     // Player firing origin
-    this.add.circle(this.PLAYER_X, this.PLAYER_Y, 10,  0x4fc3f7);
+    this.add.image(this.PLAYER_X, this.PLAYER_Y, "player").setDisplaySize(60, 60);
 
     this.hudText = this.add.text(20, 20, "", {
       fontFamily: "monospace",
       fontSize: "18px",
       color: "#ffffff",
     });
-  this.input.keyboard?.on("keydown-R", () => {
-    this.tryManualReload();
-  });
+
+    this.input.keyboard?.on("keydown-R", () => {
+      this.tryManualReload();
+    });
+
     this.reloadBarBg = this.add.rectangle(450, 580, 200, 14, 0x333333);
     this.reloadBar = this.add.rectangle(450, 580, 200, 14, 0x4fc3f7);
 
@@ -109,12 +149,13 @@ export class GameScene extends Phaser.Scene {
     const bullet = new Bullet(this, this.PLAYER_X, this.PLAYER_Y, x, y, this.BULLET_SPEED, this.gun.stats.damage);
     this.bullets.push(bullet);
   }
+
   tryManualReload() {
-  if (this.phase !== "active") return;
-  if (this.gun.reloading) return;
-  if (this.gun.ammoInMag >= this.gun.stats.magazineSize) return; // already full
-  this.gun.startReload(this.time.now);
-}
+    if (this.phase !== "active") return;
+    if (this.gun.reloading) return;
+    if (this.gun.ammoInMag >= this.gun.stats.magazineSize) return; // already full
+    this.gun.startReload(this.time.now);
+  }
 
   update(_time: number, delta: number) {
     if (this.phase === "gameover") return;
@@ -164,10 +205,12 @@ export class GameScene extends Phaser.Scene {
 
       for (const z of this.zombies) {
         if (!z.alive) continue;
-        const left = z.sprite.x - z.body.width / 2;
-        const right = z.sprite.x + z.body.width / 2;
-        const top = z.sprite.y - z.body.height / 2;
-        const bottom = z.sprite.y + z.body.height / 2;
+        // Use displayWidth/displayHeight, not width/height — sprites keep
+        // their original texture size in width/height even after setDisplaySize().
+        const left = z.sprite.x - z.body.displayWidth / 2;
+        const right = z.sprite.x + z.body.displayWidth / 2;
+        const top = z.sprite.y - z.body.displayHeight / 2;
+        const bottom = z.sprite.y + z.body.displayHeight / 2;
         if (b.sprite.x >= left && b.sprite.x <= right && b.sprite.y >= top && b.sprite.y <= bottom) {
           z.takeDamage(b.damage);
           if (!z.alive) this.money += z.moneyValue;
